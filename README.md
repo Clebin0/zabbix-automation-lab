@@ -1,22 +1,55 @@
 # Zabbix Automation Lab
 
-Laboratório seguro para estudar automação da API do Zabbix sem expor dados de ambientes corporativos.
+Laboratorio seguro para estudar automacao da API do Zabbix sem expor ambientes corporativos.
 
 ## Recursos
-- Cliente JSON-RPC
-- Autenticação por API token
-- Listagem de hosts
-- Consulta de problemas ativos
-- Relatório JSON
-- Configuração por variáveis de ambiente
-- Dry-run como padrão para exemplos futuros de escrita
 
-## Configuração
-Copie `.env.example` para `.env`, use uma instância de laboratório e um token com o menor privilégio possível.
+- Cliente JSON-RPC
+- Autenticacao por API token
+- Modo demo com dados ficticios
+- Listagem de hosts e interfaces
+- Consulta de problemas recentes
+- Relatorio JSON
+- Dashboard web
+- Exportacao via CLI
+- Configuracao por variaveis de ambiente
+- Testes automatizados
+
+## Modo demo
+
+O projeto inicia em modo demo por padrao:
 
 ```bash
 pip install -r requirements.txt
-python zabbix_report.py
+uvicorn web_app:app --reload
 ```
 
-Nunca versione tokens, URLs internas, IPs privados, nomes de clientes ou screenshots de produção.
+Abra http://127.0.0.1:8000.
+
+## Modo live
+
+Copie .env.example para .env e altere:
+
+```env
+ZABBIX_DEMO=false
+ZABBIX_URL=https://seu-lab/api_jsonrpc.php
+ZABBIX_TOKEN=seu-token
+```
+
+Use somente ambiente de laboratorio ou infraestrutura onde voce tenha autorizacao.
+
+## CLI
+
+```bash
+python zabbix_report.py --output report.json
+```
+
+## Testes
+
+```bash
+python -m pytest -q
+```
+
+## Seguranca
+
+Prefira token somente leitura e menor privilegio. Nunca publique tokens, URLs internas, IPs privados, nomes de clientes, exports de producao ou screenshots com detalhes de infraestrutura real.
