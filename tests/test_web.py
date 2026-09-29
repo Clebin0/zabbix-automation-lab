@@ -3,7 +3,11 @@ from web_app import app
 client=TestClient(app)
 
 def test_health():
-    assert client.get("/health").status_code==200
+    r=client.get("/health")
+    assert r.status_code==200
+    assert r.json()["ml_model"]=="IsolationForest"
 
-def test_report_endpoint():
-    assert client.get("/report").status_code==200
+def test_anomalies_endpoint():
+    r=client.get("/anomalies")
+    assert r.status_code==200
+    assert "metrics" in r.json()

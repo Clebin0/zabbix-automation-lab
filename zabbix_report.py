@@ -20,8 +20,7 @@ def call(method,params):
     r=requests.post(URL,json=payload,headers=headers,timeout=15)
     r.raise_for_status()
     data=r.json()
-    if "error" in data:
-        raise RuntimeError(data["error"])
+    if "error" in data: raise RuntimeError(data["error"])
     return data["result"]
 
 def demo_call(method):
@@ -60,5 +59,4 @@ def main():
     if args.output:
         Path(args.output).write_text(json.dumps(report,indent=2,ensure_ascii=False),encoding="utf-8")
 
-if __name__=="__main__":
-    main()
+if __name__=="__main__": main()
