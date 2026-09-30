@@ -26,9 +26,9 @@ def call(method,params):
 def demo_call(method):
     if method=="host.get":
         return [
-          {"hostid":"10101","host":"LAB-SRV01","name":"Lab Server 01","interfaces":[{"ip":"10.10.10.10"}]},
-          {"hostid":"10102","host":"LAB-PC01","name":"Lab Workstation 01","interfaces":[{"ip":"10.10.10.21"}]},
-          {"hostid":"10103","host":"LAB-SW01","name":"Lab Switch 01","interfaces":[{"ip":"10.10.10.2"}]}
+          {"hostid":"10101","host":"LAB-SRV01","name":"Lab Server 01","interfaces":[{"ip":"192.0.2.10"}]},
+          {"hostid":"10102","host":"LAB-PC01","name":"Lab Workstation 01","interfaces":[{"ip":"192.0.2.21"}]},
+          {"hostid":"10103","host":"LAB-SW01","name":"Lab Switch 01","interfaces":[{"ip":"192.0.2.2"}]}
         ]
     if method=="problem.get":
         return [
