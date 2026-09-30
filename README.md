@@ -1,22 +1,23 @@
 # Zabbix AIOps Lab
 
-Laboratório seguro que combina **automação da API Zabbix** com **detecção de anomalias usando Machine Learning**.
+Laboratório seguro que combina automação da API Zabbix com detecção e avaliação de anomalias em métricas sintéticas.
 
-## Recursos
+## O que o projeto demonstra
 
-- cliente JSON-RPC para Zabbix
-- modo demo com hosts e problemas fictícios
-- dashboard FastAPI
-- geração de séries sintéticas de CPU, memória e latência
-- `IsolationForest` para detecção não supervisionada de anomalias
-- anomaly score por ponto
-- endpoint genérico para analisar séries numéricas
-- testes e GitHub Actions
-- Docker
+- cliente JSON-RPC para Zabbix;
+- modo demo sem credenciais corporativas;
+- dashboard FastAPI;
+- séries sintéticas de CPU, memória e latência;
+- Isolation Forest como detector principal;
+- comparação com Local Outlier Factor e robust z-score;
+- precision, recall e F1 contra spikes conhecidos do dataset sintético;
+- visualização das séries e dos pontos sinalizados.
 
-## Por que Isolation Forest?
+## Por que comparar detectores?
 
-Em operações nem sempre existe um rótulo de "incidente" para cada ponto de métrica. Isolation Forest permite demonstrar detecção não supervisionada de observações raras sem fingir que existe um dataset corporativo rotulado.
+Um detector de anomalia não é automaticamente bom só porque encontra pontos diferentes. Como o laboratório injeta spikes conhecidos, conseguimos comparar os detectores contra uma verdade sintética controlada.
+
+Isso ainda não representa produção. Em ambiente real seria necessário considerar sazonalidade, janelas de manutenção, topologia, mudança de baseline e falso positivo por métrica.
 
 ## Executar
 
@@ -33,13 +34,14 @@ Abra `http://127.0.0.1:8000`.
 
 - `GET /report`
 - `GET /anomalies`
+- `GET /benchmark`
 - `POST /anomalies/analyze`
 - `GET /health`
 
 ## Modo live
 
-Defina `ZABBIX_DEMO=false`, `ZABBIX_URL` e `ZABBIX_TOKEN` somente para laboratório ou ambiente autorizado.
+Defina `ZABBIX_DEMO=false`, `ZABBIX_URL` e `ZABBIX_TOKEN` somente para laboratório ou infraestrutura autorizada. Prefira token read-only e menor privilégio.
 
 ## Limitações
 
-As séries incluídas são sintéticas. A contaminação e demais parâmetros não são defaults recomendados para produção. Um AIOps real exige histórico suficiente, sazonalidade, calibração por métrica, contexto operacional e avaliação de falso positivo.
+Os dados e os incidentes esperados são sintéticos. Os parâmetros de contaminação são escolhidos para demonstração e não devem ser usados como configuração padrão de produção.

@@ -11,3 +11,8 @@ def test_anomalies_endpoint():
     r=client.get("/anomalies")
     assert r.status_code==200
     assert "metrics" in r.json()
+
+def test_benchmark_endpoint():
+    r=client.get("/benchmark")
+    assert r.status_code==200
+    assert "overall" in r.json()
