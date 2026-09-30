@@ -1,13 +1,29 @@
 # Architecture
 
+## Goal
+
+This lab combines Zabbix API automation with anomaly detection over operational telemetry while keeping a safe demo mode as the default.
+
+## Flow
+
 ```mermaid
 flowchart LR
-    A[Zabbix API / Demo data] --> B[Monitoring report]
-    C[Synthetic metric series] --> D[Isolation Forest]
-    D --> E[Anomaly score]
-    E --> F[AIOps dashboard]
-    B --> F
-    F --> G[Analyst review]
+    A[Zabbix API or demo generator] --> B[Metric collection]
+    B --> C[Normalization]
+    C --> D[Isolation Forest]
+    C --> E[Local Outlier Factor]
+    C --> F[Robust z-score]
+    D --> G[Benchmark]
+    E --> G
+    F --> G
+    D --> H[FastAPI dashboard/API]
+    G --> H
 ```
 
-Live Zabbix access is optional. The public repository defaults to demo mode and contains no production credentials or internal infrastructure data.
+## Safety model
+
+Live Zabbix access is opt-in. Tokens should be read-only and scoped to the minimum required permissions. Demo mode must remain usable without corporate credentials.
+
+## Production evolution
+
+A production AIOps implementation would add durable metric storage, seasonality-aware baselines, maintenance windows, topology context, alert correlation, false-positive feedback and controlled remediation.
