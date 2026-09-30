@@ -1,24 +1,21 @@
-# AIOps Model Notes
+# Detecção de anomalias
 
-## Objective
+Neste projeto eu uso séries de CPU, memória e latência para testar detecção de comportamento fora do padrão.
 
-Demonstrate unsupervised anomaly detection for infrastructure metrics without using proprietary monitoring data.
+O detector principal é o `IsolationForest`. Também deixei Local Outlier Factor e robust z-score para ter uma referência de comparação.
 
-## Model
+Os dados de teste recebem alguns picos conhecidos. Assim fica mais fácil ver se o detector encontrou justamente os pontos alterados ou se começou a marcar coisa demais.
 
-`IsolationForest` is applied independently to synthetic CPU, memory and latency series. The demo intentionally injects a few unusual spikes so the model output can be inspected.
+## O que ainda falta
 
-## Why unsupervised?
+O laboratório não considera:
 
-Operational monitoring data often has many normal observations and few reliable incident labels. This lab explores anomaly detection without pretending a fully labeled corporate dataset exists.
+- sazonalidade;
+- janela de manutenção;
+- relação entre hosts;
+- correlação com incidente;
+- mudanças de baseline ao longo do tempo.
 
-## Limitations
+Também não trato uma anomalia como incidente automaticamente. Ela é só um sinal para investigar.
 
-- synthetic metrics
-- fixed contamination used for demonstration
-- no seasonality or maintenance windows
-- no dependency topology
-- no incident correlation
-- anomaly does not automatically mean incident
-
-Production use would require per-metric baselines, calibration, false-positive analysis, drift monitoring, maintenance context and human validation.
+O próximo passo mais útil seria trabalhar com histórico por métrica e ajustar baseline por host, em vez de usar a mesma lógica para tudo.
