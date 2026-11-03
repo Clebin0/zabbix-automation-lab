@@ -1,64 +1,84 @@
-<div align="center">
-
 # Zabbix AIOps Lab
 
-**Observabilidade · Anomaly Detection · FastAPI · Zabbix API**
+Laboratório de observabilidade e detecção de anomalias com integração JSON-RPC do Zabbix e avaliação de algoritmos em séries controladas.
 
-<img src="https://img.shields.io/badge/Python-000000?style=for-the-badge&logo=python&logoColor=white" alt="Python" />
-<img src="https://img.shields.io/badge/Zabbix-000000?style=for-the-badge&logo=zabbix&logoColor=white" alt="Zabbix" />
-<img src="https://img.shields.io/badge/scikit--learn-000000?style=for-the-badge&logo=scikitlearn&logoColor=white" alt="scikit-learn" />
-<img src="https://img.shields.io/badge/FastAPI-000000?style=for-the-badge&logo=fastapi&logoColor=white" alt="FastAPI" />
+## Visão geral
 
-</div>
+O projeto oferece dashboard FastAPI, relatório de hosts e problemas, séries métricas sintéticas e comparação entre detectores. O modo demo funciona sem credenciais externas; o modo live consulta uma instância Zabbix autorizada usando token de menor privilégio.
 
----
+## Demonstração
 
-Laboratório que combina automação da API Zabbix com detecção e avaliação de anomalias em métricas sintéticas.
+![Zabbix AIOps dashboard](docs/screenshots/dashboard.png)
 
-## O que demonstra
+A captura usa hosts e métricas sintéticos. O modo live não foi ativado nem conectado a uma infraestrutura corporativa.
 
-- cliente JSON-RPC para Zabbix;
-- modo demo sem credenciais corporativas;
-- dashboard FastAPI;
-- séries sintéticas de CPU, memória e latência;
-- Isolation Forest como detector principal;
-- comparação com Local Outlier Factor e robust z-score;
-- precision, recall e F1 contra spikes conhecidos;
-- visualização de séries e pontos sinalizados.
+## Funcionalidades
 
-## Por que comparar detectores?
+- Cliente JSON-RPC para a API do Zabbix.
+- Relatório de hosts e problemas ativos.
+- Modo demo com dados sintéticos e endereços reservados para documentação.
+- Séries de CPU, memória e latência com anomalias injetadas.
+- Isolation Forest, Local Outlier Factor e robust z-score.
+- Benchmark com precision, recall e F1 contra anomalias conhecidas.
+- Análise de séries enviadas por API.
+- Validação de tamanho, valores finitos e faixa de contamination.
+- Erros do serviço externo retornam mensagem sanitizada, sem repassar detalhes internos ao cliente.
 
-Encontrar pontos diferentes não significa detectar melhor. Como o laboratório injeta spikes conhecidos, os detectores podem ser comparados contra uma verdade sintética controlada.
+## Stack
 
-## Executar
+- Python 3.12+
+- FastAPI e Pydantic
+- scikit-learn e NumPy
+- Requests e python-dotenv
+- pytest e HTTPX
 
-~~~bash
+## Executar em modo demo
+
+Windows PowerShell:
+
+~~~powershell
 python -m venv .venv
-.venv\Scripts\activate
+.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
+$env:ZABBIX_DEMO = "true"
 uvicorn web_app:app --reload
 ~~~
 
-## API
+Abra http://127.0.0.1:8000.
 
-- <code>GET /report</code>
-- <code>GET /anomalies</code>
-- <code>GET /benchmark</code>
-- <code>POST /anomalies/analyze</code>
-- <code>GET /health</code>
+## Configurar modo live
 
-## Modo live
+Configure as variáveis no ambiente do processo ou em um arquivo .env não versionado:
 
-Use <code>ZABBIX_DEMO=false</code>, <code>ZABBIX_URL</code> e <code>ZABBIX_TOKEN</code> somente em infraestrutura autorizada. Prefira token read-only e menor privilégio.
+~~~dotenv
+ZABBIX_DEMO=false
+ZABBIX_URL=https://zabbix.example/api_jsonrpc.php
+ZABBIX_TOKEN=seu-token-read-only
+~~~
+
+Use token read-only, TLS validado e apenas em infraestrutura sob sua autorização. Não salve o token no código, screenshots, issues ou commits.
+
+## Testes
+
+~~~bash
+python -m pytest -q
+python -m compileall -q .
+~~~
+
+A suíte valida relatórios demo, os três detectores, séries personalizadas, rejeição de valores não finitos e tratamento seguro de falhas do Zabbix.
+
+## API principal
+
+| Método | Rota | Objetivo |
+|---|---|---|
+| GET | /health | Estado da aplicação |
+| GET | /report | Hosts e problemas do Zabbix |
+| GET | /anomalies | Série demo e pontos sinalizados |
+| GET | /benchmark | Comparação dos detectores |
+| POST | /anomalies/analyze | Análise de uma série informada |
 
 ## Limitações
 
-Os dados são sintéticos. Em produção seria necessário considerar sazonalidade, manutenção, topologia, mudança de baseline e falsos positivos por métrica.
+As séries de demonstração são sintéticas. Um detector de anomalia produz sinais, não confirma incidentes. A operação real deve considerar sazonalidade, manutenção, baseline por serviço, topologia, falsos positivos e validação com dados históricos autorizados.
 
----
-
-<div align="center">
-
-Laboratório de observabilidade e AIOps com foco em avaliação, não só em gráficos bonitos.
-
-</div>
+Não envie métricas ou topologia corporativa para repositórios públicos. Use exemplos sintéticos em issues, relatórios e capturas de tela.
