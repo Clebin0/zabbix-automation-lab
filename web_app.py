@@ -12,7 +12,7 @@ from anomaly import analyze_demo, benchmark, detect
 from zabbix_report import build_report
 
 logger = logging.getLogger(__name__)
-app = FastAPI(title="Zabbix AIOps Lab", version="4.1.0")
+app = FastAPI(title="Zabbix Observability Lab", version="4.1.0")
 
 
 class SeriesIn(BaseModel):
@@ -25,7 +25,7 @@ class SeriesIn(BaseModel):
     @classmethod
     def values_must_be_finite(cls, values: list[float]) -> list[float]:
         if not all(math.isfinite(value) for value in values):
-            raise ValueError("All metric values must be finite numbers")
+            raise ValueError("Todos os valores da série devem ser números finitos.")
         return values
 
 
@@ -62,10 +62,10 @@ def report():
     try:
         return build_report()
     except RuntimeError as exc:
-        logger.warning("Zabbix report request failed: %s", exc)
+        logger.warning("Falha ao consultar relatório do Zabbix: %s", exc)
         raise HTTPException(
             status_code=502,
-            detail="Zabbix API request failed. Check the server configuration and connectivity.",
+            detail="A consulta ao Zabbix falhou. Verifique a configuração e a conectividade.",
         ) from exc
 
 

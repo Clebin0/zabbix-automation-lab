@@ -1,84 +1,75 @@
-# Zabbix AIOps Lab
+# Zabbix Observability Lab
 
-Laboratório de observabilidade e detecção de anomalias com integração JSON-RPC do Zabbix e avaliação de algoritmos em séries controladas.
+Laboratório de integração de leitura com a API JSON-RPC do Zabbix e comparação de métodos para sinalizar pontos fora do comportamento esperado de uma métrica.
 
-## Visão geral
+![Painel de observabilidade](docs/screenshots/dashboard.png)
 
-O projeto oferece dashboard FastAPI, relatório de hosts e problemas, séries métricas sintéticas e comparação entre detectores. O modo demo funciona sem credenciais externas; o modo live consulta uma instância Zabbix autorizada usando token de menor privilégio.
+## Dois modos de execução
 
-## Demonstração
+**Demo** é o padrão. Usa três hosts fictícios, dois problemas de exemplo e séries métricas geradas localmente. É possível abrir o painel sem acesso a um servidor Zabbix.
 
-![Zabbix AIOps dashboard](docs/screenshots/dashboard.png)
+**Live** consulta uma instância configurada pelo operador. O cliente usa os métodos de leitura `host.get` e `problem.get`; não altera hosts, eventos ou configuração do Zabbix. Para habilitar, informe `ZABBIX_URL` e `ZABBIX_TOKEN` e defina `ZABBIX_DEMO=false`.
 
-A captura usa hosts e métricas sintéticos. O modo live não foi ativado nem conectado a uma infraestrutura corporativa.
+Use somente uma instância que você administra ou tem autorização para consultar. Prefira um token de leitura com o menor conjunto de permissões necessário.
 
-## Funcionalidades
+## Experimento de anomalias
 
-- Cliente JSON-RPC para a API do Zabbix.
-- Relatório de hosts e problemas ativos.
-- Modo demo com dados sintéticos e endereços reservados para documentação.
-- Séries de CPU, memória e latência com anomalias injetadas.
-- Isolation Forest, Local Outlier Factor e robust z-score.
-- Benchmark com precision, recall e F1 contra anomalias conhecidas.
-- Análise de séries enviadas por API.
-- Validação de tamanho, valores finitos e faixa de contamination.
-- Erros do serviço externo retornam mensagem sanitizada, sem repassar detalhes internos ao cliente.
+O gerador cria 180 pontos para CPU, memória e latência, com uma tendência periódica simples e ruído aleatório de semente fixa. Alguns picos são inseridos em posições conhecidas para comparar os detectores.
 
-## Stack
+| Método | Papel no laboratório |
+|---|---|
+| Isolation Forest | Detector usado pela análise exibida no painel |
+| Local Outlier Factor | Comparação baseada na densidade local |
+| Robust z-score | Referência estatística baseada em mediana e MAD |
 
-- Python 3.12+
-- FastAPI e Pydantic
-- scikit-learn e NumPy
-- Requests e python-dotenv
-- pytest e HTTPX
+Precision, recall e F1 são calculados contra os picos que foram inseridos no próprio gerador. Isso permite conferir o comportamento neste cenário controlado, mas não mede a capacidade de detectar incidentes desconhecidos em uma infraestrutura real.
 
 ## Executar em modo demo
 
-Windows PowerShell:
+Requisitos: Python 3.12 ou superior.
 
-~~~powershell
+```powershell
 python -m venv .venv
 .venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 $env:ZABBIX_DEMO = "true"
 uvicorn web_app:app --reload
-~~~
+```
 
-Abra http://127.0.0.1:8000.
+Abra [http://127.0.0.1:8000](http://127.0.0.1:8000).
 
-## Configurar modo live
+## Configurar a consulta ao Zabbix
 
-Configure as variáveis no ambiente do processo ou em um arquivo .env não versionado:
+Defina as variáveis no ambiente do processo ou em um arquivo `.env` local, não versionado:
 
-~~~dotenv
+```dotenv
 ZABBIX_DEMO=false
-ZABBIX_URL=https://zabbix.example/api_jsonrpc.php
-ZABBIX_TOKEN=seu-token-read-only
-~~~
+ZABBIX_URL=https://zabbix.seudominio/api_jsonrpc.php
+ZABBIX_TOKEN=token_de_leitura
+```
 
-Use token read-only, TLS validado e apenas em infraestrutura sob sua autorização. Não salve o token no código, screenshots, issues ou commits.
+O cliente usa timeout de conexão/leitura e não segue redirecionamentos. Falhas do serviço externo são registradas no log do servidor; a API não devolve detalhes internos da exceção ao navegador.
+
+## Endpoints locais
+
+| Método | Rota | Descrição |
+|---|---|---|
+| GET | `/health` | Estado e detector principal |
+| GET | `/report` | Hosts e problemas retornados pelo Zabbix ou demo |
+| GET | `/anomalies` | Séries demo e pontos sinalizados |
+| GET | `/benchmark` | Comparação dos três detectores |
+| POST | `/anomalies/analyze` | Analisar uma série numérica enviada |
+
+A rota de análise aceita de 25 a 10.000 valores finitos por chamada. A taxa de contaminação precisa ficar entre 0 e 0,5.
 
 ## Testes
 
-~~~bash
+```bash
 python -m pytest -q
-python -m compileall -q .
-~~~
+```
 
-A suíte valida relatórios demo, os três detectores, séries personalizadas, rejeição de valores não finitos e tratamento seguro de falhas do Zabbix.
+Os testes exercitam os dados demo, os detectores, os limites de entrada e o tratamento de falhas da API externa. Não substituem um teste de integração contra a sua versão do Zabbix.
 
-## API principal
+## Limites
 
-| Método | Rota | Objetivo |
-|---|---|---|
-| GET | /health | Estado da aplicação |
-| GET | /report | Hosts e problemas do Zabbix |
-| GET | /anomalies | Série demo e pontos sinalizados |
-| GET | /benchmark | Comparação dos detectores |
-| POST | /anomalies/analyze | Análise de uma série informada |
-
-## Limitações
-
-As séries de demonstração são sintéticas. Um detector de anomalia produz sinais, não confirma incidentes. A operação real deve considerar sazonalidade, manutenção, baseline por serviço, topologia, falsos positivos e validação com dados históricos autorizados.
-
-Não envie métricas ou topologia corporativa para repositórios públicos. Use exemplos sintéticos em issues, relatórios e capturas de tela.
+As séries são univariadas e sintéticas. O experimento não considera sazonalidade real, janelas de manutenção, relação entre hosts, dependência entre métricas nem baseline por serviço. Uma anomalia é um sinal para investigação, não a confirmação de um incidente.

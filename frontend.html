@@ -1,16 +1,275 @@
 <!doctype html>
-<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Zabbix Anomaly Lab</title>
-<style>:root{--bg:#090909;--panel:#111;--line:#252525;--text:#f3f3f3;--muted:#858585;--ok:#9fd0a3}*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 80% 0,rgba(255,255,255,.04),transparent 30%),var(--bg);color:var(--text);font:14px Inter,Segoe UI,sans-serif}.wrap{max-width:1180px;margin:auto;padding:30px}.top{display:flex;justify-content:space-between;align-items:flex-end;gap:20px}.brand{font-size:28px;font-weight:760;letter-spacing:-.04em}.muted{color:var(--muted)}button{background:#fff;color:#080808;border:0;border-radius:999px;padding:10px 15px;font-weight:700;cursor:pointer}.grid4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:20px}.grid2{display:grid;grid-template-columns:1.25fr .75fr;gap:14px}.card,.panel{background:rgba(17,17,17,.9);border:1px solid var(--line);border-radius:14px;padding:18px}.panel{margin-top:14px}.label{color:#686868;font:10px ui-monospace,monospace;text-transform:uppercase}.num{font-size:29px;font-weight:760;margin-top:7px}.chart{height:200px;margin-top:10px;background:#0d0d0d;border:1px solid #1f1f1f;border-radius:10px;padding:8px}.chart svg{width:100%;height:100%}.benchmark-row{display:grid;grid-template-columns:160px 1fr 55px;gap:10px;align-items:center;margin:11px 0}.bar{height:7px;background:#1c1c1c;border-radius:99px;overflow:hidden}.bar i{display:block;height:100%;background:#ededed}.status-dot{display:inline-block;width:7px;height:7px;background:var(--ok);border-radius:50%;margin-right:7px}table{width:100%;border-collapse:collapse}th,td{padding:9px;border-bottom:1px solid #222;text-align:left;font-size:12px}th{color:#666;font-weight:500}.note{font-size:11px;color:#666;line-height:1.6;margin-top:12px}@media(max-width:850px){.grid4{grid-template-columns:1fr 1fr}.grid2{grid-template-columns:1fr}.wrap{padding:18px}}</style></head>
-<body><div class="wrap">
-<div class="top"><div><div class="label">MONITORAMENTO DE MÉTRICAS</div><div class="brand">Zabbix Anomaly Lab</div><p class="muted">Observabilidade, dados sintéticos e comparação de detectores de anomalia.</p></div><button onclick="load()">Atualizar</button></div>
-<div class="grid4"><div class="card"><div class="label">Modo</div><div id="mode" class="num">-</div></div><div class="card"><div class="label">Hosts</div><div id="hostsN" class="num">0</div></div><div class="card"><div class="label">Problemas</div><div id="problemsN" class="num">0</div></div><div class="card"><div class="label">Detector ativo</div><div class="num" style="font-size:18px">Isolation Forest</div></div></div>
-<div class="panel"><h3>Séries de infraestrutura</h3><p class="muted">Pontos claros são valores normais; pontos destacados são anomalias sinalizadas pelo modelo.</p><div class="grid2"><div><div class="label">CPU</div><div id="cpuChart" class="chart"></div></div><div><div class="label">Latência</div><div id="latChart" class="chart"></div></div></div><div class="label" style="margin-top:16px">Memória</div><div id="memChart" class="chart"></div></div>
-<div class="grid2"><div class="panel"><h3>Benchmark sintético</h3><div id="benchmark"></div><div class="note">F1 calculado contra spikes injetados propositalmente nas séries. Isso avalia apenas o cenário sintético do laboratório.</div></div><div class="panel"><h3>Resumo</h3><table><thead><tr><th>Métrica</th><th>Pontos</th><th>Anomalias</th></tr></thead><tbody id="anomalyRows"></tbody></table></div></div>
-<div class="grid2"><div class="panel"><h3>Hosts de laboratório</h3><table><thead><tr><th>Host</th><th>Nome</th><th>IP</th></tr></thead><tbody id="hosts"></tbody></table></div><div class="panel"><h3>Problemas recentes</h3><table><thead><tr><th>Evento</th><th>Descrição</th><th>Sev.</th></tr></thead><tbody id="problems"></tbody></table></div></div>
-<p class="note"><span class="status-dot"></span>O modo demo usa somente dados fictícios. Em ambiente real, anomalia não equivale automaticamente a incidente.</p>
-</div>
-<script>
-function escapeHtml(value){return String(value??"").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]))}
-function chart(target,rows){const w=700,h=180,p=12,vals=rows.map(x=>x.value),min=Math.min(...vals),max=Math.max(...vals),x=i=>p+i*(w-2*p)/(rows.length-1),y=v=>h-p-(v-min)*(h-2*p)/Math.max(.0001,max-min);const points=rows.map((r,i)=>x(i)+","+y(r.value)).join(" ");const dots=rows.filter(r=>r.anomaly).map(r=>'<circle cx="'+x(r.index)+'" cy="'+y(r.value)+'" r="4.5" fill="#fff"/><circle cx="'+x(r.index)+'" cy="'+y(r.value)+'" r="8" fill="none" stroke="#777"/>').join("");target.innerHTML='<svg viewBox="0 0 '+w+' '+h+'" preserveAspectRatio="none"><polyline points="'+points+'" fill="none" stroke="#5f5f5f" stroke-width="2"/>'+dots+"</svg>"}
-async function load(){const [r,a,b]=await Promise.all([fetch("/report").then(x=>x.json()),fetch("/anomalies").then(x=>x.json()),fetch("/benchmark").then(x=>x.json())]);mode.textContent=r.mode.toUpperCase();hostsN.textContent=r.host_count;problemsN.textContent=r.problem_count;hosts.innerHTML=r.hosts.map(h=>'<tr><td>'+escapeHtml(h.host)+'</td><td>'+escapeHtml(h.name)+'</td><td>'+escapeHtml((h.interfaces&&h.interfaces[0]&&h.interfaces[0].ip)||"-")+'</td></tr>').join("");problems.innerHTML=r.problems.map(p=>'<tr><td>'+escapeHtml(p.eventid)+'</td><td>'+escapeHtml(p.name)+'</td><td>'+escapeHtml(p.severity)+'</td></tr>').join("");anomalyRows.innerHTML=Object.entries(a.metrics).map(([k,v])=>'<tr><td>'+k+'</td><td>'+v.points+'</td><td>'+v.anomalies+'</td></tr>').join("");chart(cpuChart,a.metrics.cpu.series);chart(latChart,a.metrics.latency_ms.series);chart(memChart,a.metrics.memory.series);benchmark.innerHTML=Object.entries(b.overall).map(([name,m])=>'<div class="benchmark-row"><span class="muted">'+name.replaceAll("_"," ")+'</span><div class="bar"><i style="width:'+Math.max(2,m.f1*100)+'%"></i></div><span>'+Math.round(m.f1*100)+'%</span></div>').join("")}load();
-</script></body></html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101a1b">
+  <title>Zabbix Observability Lab</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #101a1b;
+      --panel: #172526;
+      --panel-deep: #121e1f;
+      --line: #2a4141;
+      --text: #e4efeb;
+      --muted: #91aaa2;
+      --accent: #5bd0a5;
+      --accent-dim: #285e50;
+      --warning: #e2b66d;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; background: var(--bg); color: var(--text);
+      font: 14px/1.5 Inter, "Segoe UI", Arial, sans-serif;
+    }
+    button { font: inherit; cursor: pointer; }
+    .wrap { width: min(1200px, 100%); margin: 0 auto; padding: 28px 26px 40px; }
+    .top {
+      display: flex; justify-content: space-between; align-items: center;
+      gap: 18px; padding-bottom: 19px; border-bottom: 1px solid var(--line);
+    }
+    .kicker { color: var(--accent); font-size: 10px; font-weight: 750; letter-spacing: .14em; text-transform: uppercase; }
+    h1 { margin: 3px 0 0; font-size: 25px; letter-spacing: -.035em; }
+    h2 { margin: 0 0 13px; font-size: 14px; }
+    .subtitle { color: var(--muted); margin: 5px 0 0; }
+    .refresh {
+      padding: 9px 13px; border: 1px solid var(--accent-dim); border-radius: 5px;
+      background: var(--accent); color: #10221c; font-weight: 750;
+    }
+    .refresh:hover { background: #79dfb9; }
+    .summary {
+      display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px; margin: 16px 0;
+    }
+    .metric, .panel {
+      min-width: 0; padding: 16px; border: 1px solid var(--line);
+      border-radius: 6px; background: var(--panel);
+    }
+    .metric-label { color: var(--muted); font-size: 10px; letter-spacing: .09em; text-transform: uppercase; }
+    .metric-value { margin-top: 6px; font-size: 27px; font-weight: 750; letter-spacing: -.035em; }
+    .metric-value.text { font-size: 16px; letter-spacing: 0; }
+    .grid-two { display: grid; grid-template-columns: 1.2fr .8fr; gap: 12px; }
+    .panel { margin-top: 12px; }
+    .chart-grid { display: grid; grid-template-columns: 1.1fr .9fr; gap: 12px; }
+    .chart-title { color: var(--muted); font-size: 10px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; }
+    .chart {
+      height: 185px; margin-top: 7px; padding: 7px;
+      border: 1px solid #263a3a; border-radius: 4px; background: var(--panel-deep);
+    }
+    .chart svg { width: 100%; height: 100%; display: block; }
+    .chart-wide { margin-top: 13px; }
+    .note { margin: 11px 0 0; color: var(--muted); font-size: 11px; line-height: 1.55; }
+    .benchmarks { display: grid; gap: 12px; }
+    .benchmark-row {
+      display: grid; grid-template-columns: 150px minmax(55px, 1fr) 42px;
+      align-items: center; gap: 10px;
+    }
+    .benchmark-label { color: #c1d3cc; font-size: 11px; }
+    .bar { height: 7px; border-radius: 2px; background: #273a39; overflow: hidden; }
+    .bar i { display: block; height: 100%; background: var(--accent); }
+    .bar-value { color: var(--text); font-size: 11px; text-align: right; }
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; min-width: 340px; }
+    th, td { padding: 9px 10px; border-bottom: 1px solid #2a3c3c; text-align: left; font-size: 11px; }
+    th { color: var(--muted); font-weight: 650; }
+    td { color: #dce7e2; }
+    .severity { color: var(--warning); font-weight: 750; }
+    .footnote { display: flex; align-items: flex-start; gap: 8px; margin-top: 16px; color: var(--muted); font-size: 11px; }
+    .footnote::before { content: ""; width: 7px; height: 7px; flex: 0 0 7px; margin-top: 5px; border-radius: 50%; background: var(--accent); }
+    .error { color: #f1a28f; }
+    @media (max-width: 820px) {
+      .wrap { padding: 19px 14px 30px; }
+      .summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .grid-two, .chart-grid { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 480px) {
+      .top { align-items: flex-start; }
+      .benchmark-row { grid-template-columns: 112px minmax(45px, 1fr) 38px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <header class="top">
+      <div>
+        <div class="kicker">Observabilidade · integração de leitura</div>
+        <h1>Zabbix Observability Lab</h1>
+        <p class="subtitle">Hosts, problemas e análise de séries de infraestrutura.</p>
+      </div>
+      <button id="refreshButton" class="refresh" type="button">Atualizar dados</button>
+    </header>
+
+    <section class="summary" aria-label="Estado da consulta">
+      <article class="metric"><div class="metric-label">Origem</div><div id="mode" class="metric-value text">-</div></article>
+      <article class="metric"><div class="metric-label">Hosts retornados</div><div id="hostsN" class="metric-value">0</div></article>
+      <article class="metric"><div class="metric-label">Problemas ativos</div><div id="problemsN" class="metric-value">0</div></article>
+      <article class="metric"><div class="metric-label">Detector do painel</div><div class="metric-value text">Isolation Forest</div></article>
+    </section>
+
+    <section class="panel">
+      <h2>Séries de infraestrutura</h2>
+      <p class="note">Cada gráfico representa uma métrica. Os círculos indicam os pontos marcados pelo detector principal.</p>
+      <div class="chart-grid">
+        <div><div class="chart-title">CPU · percentual</div><div id="cpuChart" class="chart"></div></div>
+        <div><div class="chart-title">Latência · ms</div><div id="latChart" class="chart"></div></div>
+      </div>
+      <div class="chart-wide">
+        <div class="chart-title">Memória · percentual</div>
+        <div id="memChart" class="chart"></div>
+      </div>
+    </section>
+
+    <section class="grid-two">
+      <article class="panel">
+        <h2>Comparação dos detectores</h2>
+        <div id="benchmark" class="benchmarks"></div>
+        <p class="note">F1 calculado contra os picos inseridos no gerador. O resultado mede somente este cenário sintético.</p>
+      </article>
+      <article class="panel">
+        <h2>Quantidade sinalizada</h2>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Métrica</th><th>Pontos</th><th>Marcados</th></tr></thead>
+            <tbody id="anomalyRows"></tbody>
+          </table>
+        </div>
+      </article>
+    </section>
+
+    <section class="grid-two">
+      <article class="panel">
+        <h2>Hosts consultados</h2>
+        <div class="table-wrap">
+          <table><thead><tr><th>Host técnico</th><th>Nome</th><th>IP</th></tr></thead><tbody id="hosts"></tbody></table>
+        </div>
+      </article>
+      <article class="panel">
+        <h2>Problemas recentes</h2>
+        <div class="table-wrap">
+          <table><thead><tr><th>Evento</th><th>Descrição</th><th>Severidade</th></tr></thead><tbody id="problems"></tbody></table>
+        </div>
+      </article>
+    </section>
+
+    <p id="loadError" class="note error" hidden></p>
+    <p class="footnote">O modo demo usa hosts, problemas e métricas fictícios. No modo live, a integração consulta a API; uma anomalia continua sendo apenas um sinal para investigar.</p>
+  </main>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+    const metricLabels = {
+      cpu: "CPU",
+      latency_ms: "Latência",
+      memory: "Memória"
+    };
+    const detectorLabels = {
+      isolation_forest: "Isolation Forest",
+      local_outlier_factor: "Local Outlier Factor",
+      robust_zscore: "Robust z-score"
+    };
+    const severityLabels = {
+      "0": "Não classificado",
+      "1": "Informação",
+      "2": "Atenção",
+      "3": "Média",
+      "4": "Alta",
+      "5": "Desastre"
+    };
+    const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({
+      "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+    })[char]);
+
+    function renderChart(target, rows) {
+      if (!rows.length) {
+        target.textContent = "Sem pontos para exibir.";
+        return;
+      }
+
+      const width = 720;
+      const height = 180;
+      const padding = 12;
+      const values = rows.map((row) => Number(row.value));
+      const min = Math.min(...values);
+      const max = Math.max(...values);
+      const range = Math.max(0.0001, max - min);
+      const x = (index) => padding + index * (width - 2 * padding) / Math.max(1, rows.length - 1);
+      const y = (value) => height - padding - (value - min) * (height - 2 * padding) / range;
+      const points = rows.map((row, index) => `${x(index)},${y(Number(row.value))}`).join(" ");
+      const markers = rows.map((row, index) => {
+        if (!row.anomaly) return "";
+        return `<circle cx="${x(index)}" cy="${y(Number(row.value))}" r="4" fill="#5bd0a5" stroke="#d7fff0" stroke-width="1.2"></circle>`;
+      }).join("");
+
+      target.innerHTML = `
+        <svg viewBox="0 0 ${width} ${height}" role="img" aria-label="Série temporal com pontos sinalizados">
+          <line x1="${padding}" y1="${height - padding}" x2="${width - padding}" y2="${height - padding}" stroke="#294140" stroke-width="1"></line>
+          <polyline points="${points}" fill="none" stroke="#83a99b" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round"></polyline>
+          ${markers}
+        </svg>`;
+    }
+
+    async function load() {
+      $("loadError").hidden = true;
+      $("refreshButton").disabled = true;
+      $("refreshButton").textContent = "Consultando...";
+
+      try {
+        const responses = await Promise.all([
+          fetch("/report"),
+          fetch("/anomalies"),
+          fetch("/benchmark")
+        ]);
+        if (!responses.every((response) => response.ok)) {
+          throw new Error("Uma das consultas retornou erro.");
+        }
+        const [report, anomalies, benchmark] = await Promise.all(
+          responses.map((response) => response.json())
+        );
+
+        $("mode").textContent = report.mode === "demo" ? "DEMO" : "AO VIVO";
+        $("hostsN").textContent = report.host_count;
+        $("problemsN").textContent = report.problem_count;
+
+        $("hosts").innerHTML = report.hosts.map((host) => {
+          const ip = host.interfaces?.[0]?.ip || "—";
+          return `<tr><td>${escapeHtml(host.host)}</td><td>${escapeHtml(host.name)}</td><td>${escapeHtml(ip)}</td></tr>`;
+        }).join("");
+
+        $("problems").innerHTML = report.problems.map((problem) => {
+          const severity = severityLabels[String(problem.severity)] || "Desconhecida";
+          return `<tr><td>${escapeHtml(problem.eventid)}</td><td>${escapeHtml(problem.name)}</td><td class="severity">${severity}</td></tr>`;
+        }).join("");
+
+        $("anomalyRows").innerHTML = Object.entries(anomalies.metrics).map(([key, metric]) =>
+          `<tr><td>${metricLabels[key] || escapeHtml(key)}</td><td>${Number(metric.points)}</td><td>${Number(metric.anomalies)}</td></tr>`
+        ).join("");
+
+        renderChart($("cpuChart"), anomalies.metrics.cpu.series);
+        renderChart($("latChart"), anomalies.metrics.latency_ms.series);
+        renderChart($("memChart"), anomalies.metrics.memory.series);
+
+        $("benchmark").innerHTML = Object.entries(benchmark.overall).map(([key, result]) => {
+          const label = detectorLabels[key] || key;
+          const score = Math.max(0, Math.min(1, Number(result.f1)));
+          return `
+            <div class="benchmark-row">
+              <span class="benchmark-label">${escapeHtml(label)}</span>
+              <div class="bar"><i style="width:${score * 100}%"></i></div>
+              <span class="bar-value">${Math.round(score * 100)}%</span>
+            </div>`;
+        }).join("");
+      } catch (error) {
+        $("loadError").textContent = error.message || "Falha ao carregar os dados.";
+        $("loadError").hidden = false;
+      } finally {
+        $("refreshButton").disabled = false;
+        $("refreshButton").textContent = "Atualizar dados";
+      }
+    }
+
+    $("refreshButton").addEventListener("click", load);
+    load();
+  </script>
+</body>
+</html>
